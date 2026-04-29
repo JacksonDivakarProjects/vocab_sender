@@ -1,0 +1,3 @@
+0 * * * * /usr/bin/python3 "/home/jackson-divakar/Vocab Sender/Python_File/Vocab_Sender.py" >> "/home/jackson-divakar/Vocab Sender/Python_File/vocab_bot.log" 2>&1
+
+
