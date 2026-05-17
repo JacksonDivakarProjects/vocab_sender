@@ -1,0 +1,14 @@
+services:
+  vocab-sender:
+    build: .
+    image: jackdiva/vocab_sender:latest
+    container_name: vocab-sender
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./vocab_data:/app/vocab_data:ro
+      - ./logs:/app/logs
+
+    restart: "no"

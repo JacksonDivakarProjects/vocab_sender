@@ -1,0 +1,8 @@
+# HTTP requests (Telegram & OpenRouter)
+requests>=2.31.0
+
+# Data processing
+pandas>=2.0.0
+
+# Environment variable management
+python-dotenv>=1.0.0
