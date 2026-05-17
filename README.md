@@ -1,58 +1,46 @@
-### Project Documentation: Daily Vocabulary Bot (OpenRouter + Telegram)
+# Vocab Sender — Daily Vocabulary Bot
+
+Picks one word per difficulty level from CSV files, generates structured
+linguistic details via **OpenRouter**, and broadcasts the result to
+**Telegram** users.
 
 ---
 
-## 1. Overview
+## Project Structure
 
-This project is an automated **Vocabulary Learning Bot** that:
-
-* Extracts words from CSV files categorized by difficulty level.
-* Selects one word each from **Beginner, Intermediate, Advanced** levels.
-* Uses an LLM via **OpenRouter API** to generate structured linguistic details.
-* Sends the formatted output to users via **Telegram Bot API**.
-
-Core objective: deliver **daily structured vocabulary training** with minimal API usage (single request for multiple words).
-
----
-
-## 2. System Architecture
-
-**Flow:**
-
-1. Load environment variables
-2. Read and merge CSV datasets
-3. Sample 3 words (one per level)
-4. Generate prompt dynamically
-5. Send request to OpenRouter
-6. Receive formatted response
-7. Send output to Telegram users
+```
+vocab_sender/
+├── vocab_sender.py      # Main application
+├── Dockerfile           # Multi-stage Docker build
+├── docker-compose.yml   # Compose file for local runs
+├── requirements.txt     # Python dependencies
+├── .env.example         # Environment variable template
+├── .gitignore
+└── vocab_data/          # Mount your vocabulary CSVs here
+```
 
 ---
 
-## 3. Key Components
+## Quick Start (Docker)
 
-### 3.1 Environment Configuration
+### 1. Configure environment
 
-Uses `.env` file to store sensitive data:
+```bash
+cp .env.example .env
+# Edit .env with your API keys
+```
 
-* `CSV_PATH` → directory of vocabulary CSV files
-* `OPEN_ROUTER_KEY` → OpenRouter API key
-* `MODEL_ID` → LLM model identifier
-* `TELEGRAM_KEY` → Telegram bot token
-* `TELEGRAM_CHAT_ID` → recipient chat ID
+### 2. Add vocabulary CSVs
 
----
-
-### 3.2 Data Source (CSV Files)
-
-Expected structure:
+Place your CSV files inside `vocab_data/`. Expected columns:
 
 | Word     | Level        |
-| -------- | ------------ |
+|----------|--------------|
 | example  | beginner     |
 | analyze  | intermediate |
 | paradigm | advanced     |
 
+<<<<<<< HEAD
 Processing steps:
 
 * Normalize column names
@@ -199,10 +187,33 @@ Message format:
 🌟 DAILY VOCABULARY BOOST 🌟
 
 [Generated content]
+=======
+### 3. Run with Docker Compose
+
+```bash
+docker compose up --build
+```
+
+### 4. Schedule daily runs (cron)
+
+```bash
+# Run every day at 09:00
+0 9 * * * docker compose -f /path/to/docker-compose.yml up --build >> /var/log/vocab_sender.log 2>&1
+```
+
+Or with `docker run` directly:
+
+```bash
+docker build -t vocab-sender .
+docker run --rm --env-file .env \
+  -v "$(pwd)/vocab_data:/data/vocab:ro" \
+  vocab-sender
+>>>>>>> master
 ```
 
 ---
 
+<<<<<<< HEAD
 ## 4. Efficiency Design
 
 ### API Optimization
@@ -281,3 +292,40 @@ This system combines:
 * API orchestration (OpenRouter + Telegram)
 
 Core strength: **high efficiency + structured linguistic output with minimal API cost**.
+=======
+## Environment Variables
+
+| Variable         | Description                          | Required |
+|------------------|--------------------------------------|----------|
+| `CSV_PATH`       | Path to vocabulary CSV directory     | Yes      |
+| `OPEN_ROUTER_KEY`| OpenRouter API key                   | Yes      |
+| `MODEL_ID`       | LLM model identifier                 | Yes      |
+| `TELEGRAM_KEY`   | Telegram bot token                   | Yes      |
+| `TELEGRAM_CHAT_ID`| Recipient Telegram chat ID          | Yes      |
+
+---
+
+## Refactoring Changes
+
+| Area | Before | After |
+|------|--------|-------|
+| Config | Inline `os.getenv` calls scattered | `Config` dataclass + `load_config()` with startup validation |
+| Logging | `print()` statements | Structured `logging` to stdout + file |
+| Retry logic | None | Exponential back-off on OpenRouter calls |
+| Error handling | Generic `except Exception` | Specific exception types with clear messages |
+| Code structure | Single flat script | Functions grouped by responsibility |
+| Dependencies | Included unused `google-genai` | Removed; only needed packages kept |
+| Docker | Not containerised | Multi-stage Dockerfile + Compose file |
+| Security | — | Non-root container user |
+
+---
+
+## Architecture
+
+```
+load_config()
+    └─ load_vocabulary() → pick_words()
+                                └─ fetch_word_details()   [OpenRouter, with retry]
+                                        └─ broadcast()    [Telegram, per user]
+```
+>>>>>>> master

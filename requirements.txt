@@ -1,11 +1,8 @@
-# Data Manipulation
-pandas>=2.0.0
-
-# API Requests (Telegram & OpenRouter)
+# HTTP requests (Telegram & OpenRouter)
 requests>=2.31.0
 
-# Environment Variable Management
-python-dotenv>=1.0.0
+# Data processing
+pandas>=2.0.0
 
-# Google AI Client (Optional: Only if you still use the Google SDK)
-google-genai>=0.1.0
+# Environment variable management
+python-dotenv>=1.0.0
