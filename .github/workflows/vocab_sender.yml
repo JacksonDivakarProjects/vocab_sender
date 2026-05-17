@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Pull image
         run: docker pull jackdiva/vocab_sender:latest
@@ -21,7 +21,7 @@ jobs:
         run: |
           docker run --rm \
             -e CSV_PATH=/app/vocab_data \
-            -e OPEN_ROUTER_KEY="${{ secrets.OPENROUTER_KEY }}" \
+            -e OPEN_ROUTER_KEY="${{ secrets.OPENROUTER_API_KEY }}" \
             -e MODEL_ID="${{ secrets.MODEL_ID }}" \
             -e TELEGRAM_KEY="${{ secrets.TELEGRAM_KEY }}" \
             -e TELEGRAM_CHAT_ID="${{ secrets.TELEGRAM_CHAT_ID }}" \
