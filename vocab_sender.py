@@ -64,7 +64,7 @@ class Config:
     nvidia_api_key: str
     model_id: str
     users: list[TelegramUser] = field(default_factory=list)
-    request_timeout: int = 30
+    request_timeout: int = 120
 
 
 def load_config() -> Config:
