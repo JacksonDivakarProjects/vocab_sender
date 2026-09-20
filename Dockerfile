@@ -31,7 +31,7 @@ USER vocabbot
 
 # ── Environment defaults (override via --env-file or -e flags) ───────────────
 ENV CSV_PATH=./vocab_data \
-    MODEL_ID=google/gemini-2.0-flash-exp:free \
+    MODEL_ID=openai/gpt-oss-20b \
     PYTHONUNBUFFERED=1
 
 # The container runs the bot once and exits (designed for cron / scheduler).
