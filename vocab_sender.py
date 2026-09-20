@@ -1,7 +1,7 @@
 """
 Vocab Sender — Daily Vocabulary Bot
 Picks one word per level from CSV files, generates linguistic details
-via OpenRouter, and broadcasts the result to Telegram users.
+via NVIDIA API (OpenAI client), and broadcasts the result to Telegram users.
 """
 
 import logging
@@ -16,6 +16,7 @@ from typing import Optional
 import pandas as pd
 import requests
 from dotenv import load_dotenv
+from openai import OpenAI, OpenAIError
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -33,7 +34,7 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+NVIDIA_API_URL = "https://integrate.api.nvidia.com/v1"
 TELEGRAM_URL = "https://api.telegram.org/bot{token}/sendMessage"
 
 LEVELS = ("beginner", "intermediate", "advanced")
@@ -60,7 +61,7 @@ class TelegramUser:
 @dataclass
 class Config:
     csv_dir: Path
-    openrouter_key: str
+    nvidia_api_key: str
     model_id: str
     users: list[TelegramUser] = field(default_factory=list)
     request_timeout: int = 30
@@ -73,7 +74,7 @@ def load_config() -> Config:
     missing = []
     required = {
         "CSV_PATH": os.getenv("CSV_PATH"),
-        "OPEN_ROUTER_KEY": os.getenv("OPEN_ROUTER_KEY"),
+        "NVIDIA_API_KEY": os.getenv("NVIDIA_API_KEY"),
         "MODEL_ID": os.getenv("MODEL_ID"),
         "TELEGRAM_KEY": os.getenv("TELEGRAM_KEY"),
         "TELEGRAM_CHAT_ID": os.getenv("TELEGRAM_CHAT_ID"),
@@ -94,7 +95,7 @@ def load_config() -> Config:
 
     return Config(
         csv_dir=csv_dir,
-        openrouter_key=required["OPEN_ROUTER_KEY"],
+        nvidia_api_key=required["NVIDIA_API_KEY"],
         model_id=required["MODEL_ID"],
         users=[
             TelegramUser(
@@ -153,7 +154,7 @@ def pick_words(df: pd.DataFrame) -> Optional[WordList]:
 
 
 # ---------------------------------------------------------------------------
-# OpenRouter
+# LLM Inference (NVIDIA API)
 # ---------------------------------------------------------------------------
 def build_prompt(words: WordList) -> str:
     tense = random.choice(TENSES)
@@ -176,32 +177,39 @@ def build_prompt(words: WordList) -> str:
 
 
 def fetch_word_details(words: WordList, cfg: Config, retries: int = 3) -> Optional[str]:
-    """Call OpenRouter once for all words; retry on transient failures."""
-    headers = {
-        "Authorization": f"Bearer {cfg.openrouter_key}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "http://localhost:5000",
-        "X-Title": "Vocabulary Bot",
-    }
-    payload = {
-        "model": cfg.model_id,
-        "messages": [{"role": "user", "content": build_prompt(words)}],
-    }
+    """Call NVIDIA API using the OpenAI client; retry on transient failures."""
+    client = OpenAI(
+        base_url=NVIDIA_API_URL,
+        api_key=cfg.nvidia_api_key,
+        timeout=cfg.request_timeout
+    )
+
+    messages = [{"role": "user", "content": build_prompt(words)}]
 
     for attempt in range(1, retries + 1):
         try:
-            resp = requests.post(
-                OPENROUTER_URL, headers=headers, json=payload, timeout=cfg.request_timeout
+            completion = client.chat.completions.create(
+                model=cfg.model_id,
+                messages=messages,
+                temperature=1,
+                top_p=1,
+                max_tokens=4096,
+                stream=False
             )
-            resp.raise_for_status()
-            return resp.json()["choices"][0]["message"]["content"].strip()
-        except requests.exceptions.Timeout:
-            log.warning("OpenRouter timeout (attempt %d/%d).", attempt, retries)
-        except requests.exceptions.HTTPError as exc:
-            log.error("OpenRouter HTTP error: %s", exc)
-            break
+            
+            message = completion.choices[0].message
+            
+            # Extract optional reasoning content for logging
+            reasoning = getattr(message, "reasoning_content", None)
+            if reasoning:
+                log.info("Model Reasoning:\n%s", reasoning)
+                
+            return message.content.strip()
+
+        except OpenAIError as exc:
+            log.error("NVIDIA API error (attempt %d/%d): %s", attempt, retries, exc)
         except Exception as exc:
-            log.error("OpenRouter unexpected error: %s", exc)
+            log.error("Unexpected error during inference: %s", exc)
             break
 
         if attempt < retries:
@@ -262,7 +270,7 @@ def main() -> None:
 
     content = fetch_word_details(words, cfg)
     if not content:
-        log.error("Failed to fetch word details from OpenRouter.")
+        log.error("Failed to fetch word details from NVIDIA API.")
         sys.exit(1)
 
     broadcast(cfg.users, build_message(content))
